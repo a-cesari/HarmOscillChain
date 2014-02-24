@@ -1,4 +1,4 @@
 #!/bin/sh
 gcc -O main.c -o main -lm
-./main $1
+./main $1 $2
 exit
