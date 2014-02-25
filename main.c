@@ -80,7 +80,7 @@ for(i=0;i<n_particles;i++)
         }
 
 sort_increasing(freq_vett,n_particles);
-t_tot=10000;
+t_tot=100000;
 tau=2*M_PI/max(freq_vett,n_particles);
 dt=tau/10;
 n_steps=t_tot/dt+1;
@@ -123,7 +123,7 @@ while(nr<nruns)
         }
 
 
-        thermo_type=berendsen;
+        thermo_type=bussi;
 
         trajectory2= fopen("trajectory2.dat","w");
         int counter=0;
@@ -203,7 +203,7 @@ nr++;
 energy=fopen("energy.dat","w");
 for(i=0;i<n_particles;i++)
 	{
-	stdev[i]=sqrt(sumsquare[i]-pow(mean[i],2));
+	stdev[i]=(sqrt(sumsquare[i]-pow(mean[i],2)))/sqrt(nruns);
 	fprintf(energy,"%f %f %f\n",freq_vett[i],mean[i],stdev[i]);
 	}
 fclose(energy);
