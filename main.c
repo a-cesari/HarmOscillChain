@@ -39,7 +39,7 @@ double *pos;     //phonon positions vector
 double *vel;     //phonon velocities vector     //to change with dynamic allocation
 double *freq_vett,t_tot,dt,tau,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,*sumsquare,*mean,*stdev;         //phonon frequency vector, energy without thermostat, energy with thermostat
 int n_particles=0,n_steps,i,j,k,nruns,nr,intseed;
-double targetT=20.0,Tstart=10.0,m=1.0,a;  //target energy
+double targetT=20.0,Tstart=10.0,m=1.0,a,tau1,tau2;  
 char fname[15]="phase",prtc_numb[6];
 t_type thermo_type;
 long SEED,*seeds;
@@ -81,7 +81,11 @@ for(i=0;i<n_particles;i++)
 
 sort_increasing(freq_vett,n_particles);
 t_tot=100000;
-tau=2*M_PI/max(freq_vett,n_particles);
+tau1=2*M_PI/max(freq_vett,n_particles);
+tau2=10; /*relaxation time of thermostat toward target T */
+tau=tau2;
+if(tau2>tau1)
+	tau=tau1;
 dt=tau/10;
 n_steps=t_tot/dt+1;
 comp_rot_matr(matr_array,dt,freq_vett,n_particles);
@@ -136,9 +140,9 @@ while(nr<nruns)
             UPDATE_P=TRUE;
             counter=0;
             }
-            thermostat(vel,n_particles,m,targetT,dt/2,2,tau,thermo_type,UPDATE_P,&SEED);
+            thermostat(vel,n_particles,m,targetT,dt/2,2,tau2,thermo_type,UPDATE_P,&SEED);
             update_qp(pos,vel,matr_array,n_particles,dt,freq_vett);
-            thermostat(vel,n_particles,m,targetT,dt/2,2,tau,thermo_type,UPDATE_P,&SEED);
+            thermostat(vel,n_particles,m,targetT,dt/2,2,tau2,thermo_type,UPDATE_P,&SEED);
             counter++;
             UPDATE_P=FALSE;
             for(j=0;j<n_particles;j++)
