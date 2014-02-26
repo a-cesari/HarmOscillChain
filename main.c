@@ -135,7 +135,7 @@ while(nr<nruns)
         for(i=0;i<n_steps;i++)
         {
             print_traj(pos,vel,0,trajectory2);
-            if(counter>=(tau/dt))
+            if(counter>=(tau2/dt))
             {
             UPDATE_P=TRUE;
             counter=0;

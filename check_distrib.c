@@ -123,7 +123,7 @@ for(i=0;i<n_steps;i++)
 {
     print_traj(pos,vel,0,trajectory2);
     print_traj2(vel,vel,vel,1,2,3,traj3);
-    if(counter>=(tau/dt))
+    if(counter>=(tau2/dt))
     {
     UPDATE_P=TRUE;
     counter=0;
