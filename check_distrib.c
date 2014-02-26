@@ -29,7 +29,7 @@ int main(int argc, char *argv[])
 FILE *f_freq,*energy_before,*energy_after,*trajectory1,*trajectory2,*pcorr,*qcorr,*ph,*traj3,*mom3f,*mom4f;
 double *pos;     //phonon positions vector
 double *vel;     //phonon velocities vector     //to change with dynamic allocation
-double *freq_vett,t_tot,dt,tau,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,***mom3,****mom4;//*avg,*z;         //phonon frequency vector, energy without thermostat, energy with thermostat
+double *freq_vett,t_tot,dt,tau,tau1,tau2,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,***mom3,****mom4;//*avg,*z;         //phonon frequency vector, energy without thermostat, energy with thermostat
 int n_particles=0,n_steps,i,j,k,l,n;
 double targetT=20.0,Tstart=10.0,m=1.0;  //target energy
 char fname[15]="phase",prtc_numb[6];
