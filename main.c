@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include<time.h>
 #define KB 1
 #define IA 16807
 #define IM 2147483647
@@ -38,11 +39,38 @@ FILE *f_freq,*energy_before,*energy_after,*trajectory1,*trajectory2,*pcorr,*qcor
 double *pos;     //phonon positions vector
 double *vel;     //phonon velocities vector     //to change with dynamic allocation
 double *freq_vett,t_tot,dt,tau,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,*sumsquare,*mean,*stdev;         //phonon frequency vector, energy without thermostat, energy with thermostat
-int n_particles=0,n_steps,i,j,k,nruns,nr,intseed;
-double targetT=20.0,Tstart=10.0,m=1.0,a,tau1,tau2;  
-char fname[15]="phase",prtc_numb[6];
+int n_particles=0,n_steps,i,j,k,nruns=1,nr,intseed,narg,PLOT_TRAJ=0,np;
+double targetT=20.0,Tstart=10.0,m=1.0,a,tau1,tau2;
+char fname[15]="phase",prtc_numb[6],seeds_fn[20],thermo[15],*ptr,data[17],trjname[21]="trj",ename[21]="en";
 t_type thermo_type;
 long SEED,*seeds;
+time_t rawtime;
+struct tm* ltime;
+t_tot=atoi(argv[2]);
+if(strcmp(argv[3],"bussi")==0){
+    thermo_type=3;
+    strcpy(thermo,"bussi");}
+if(strcmp(argv[3],"langevin")==0){
+    thermo_type=2;
+    strcpy(thermo,"langevin");}
+if(strcmp(argv[3],"andersen")==0){
+    thermo_type=1;
+    strcpy(thermo,"andersen");}
+if(strcmp(argv[3],"berendsen")==0){
+    thermo_type=0;
+    strcpy(thermo,"berendsen");}
+if(argc>4)
+    tau2=strtod(argv[4],&ptr);
+if(argc>5)
+    PLOT_TRAJ=atoi(argv[5]);
+if(argc>6)
+{
+    nruns=atoi(argv[6]);
+    strcpy(seeds_fn,argv[7]);
+}
+time (&rawtime);
+ltime = localtime(&rawtime);
+sprintf(data,"%d%d%d%d%d%s",ltime->tm_mday,ltime->tm_mon+1,ltime->tm_year+1900,ltime->tm_hour,ltime->tm_min,".dat");
 
 //Frequency file reading
    if ((f_freq= fopen(argv[1],"r")) != NULL)
@@ -71,16 +99,16 @@ for(i=0;i<n_particles;i++)
 for(i=0;i<n_particles;i++)
     for(j=0;j<2;j++)
         matr_array[i][j]=malloc(2*sizeof(double));
-pcorr_matrix=(double **)malloc(sizeof(double *) * n_particles);
+/*pcorr_matrix=(double **)malloc(sizeof(double *) * n_particles);
 qcorr_matrix=(double **)malloc(sizeof(double *) * n_particles);
 for(i=0;i<n_particles;i++)
         {
         pcorr_matrix[i]=malloc(n_particles*sizeof(double));
         qcorr_matrix[i]=malloc(n_particles*sizeof(double));
-        }
+        }*/
 
 sort_increasing(freq_vett,n_particles);
-t_tot=100000;
+//t_tot=100000;
 tau1=2*M_PI/max(freq_vett,n_particles);
 tau2=10; /*relaxation time of thermostat toward target T */
 tau=tau2;
@@ -89,35 +117,50 @@ if(tau2>tau1)
 dt=tau/10;
 n_steps=t_tot/dt+1;
 comp_rot_matr(matr_array,dt,freq_vett,n_particles);
-if((f_seed=fopen(argv[2],"r"))!=NULL)
-	{
-	fscanf(f_seed,"%d",&nruns);
-	seeds=(long *)malloc(sizeof(long) * nruns);
-	for(nr=0;nr<nruns;nr++)
-		{
-		fscanf(f_seed,"%d",&intseed);
-		seeds[nr]=(long)intseed;
-		}
-
-	}
-for(i=0;i<n_particles;i++)
+if(nruns>1)
 {
-    sumsquare[j]=0.0;
-    mean[j]=0.0;
+    if((f_seed=fopen(seeds_fn,"r"))!=NULL)
+        {
+        fscanf(f_seed,"%d",&nruns);
+        seeds=(long *)malloc(sizeof(long) * nruns);
+        for(nr=0;nr<nruns;nr++)
+            {
+            fscanf(f_seed,"%d",&intseed);
+            seeds[nr]=(long)intseed;
+            }
+
+        }
+    for(i=0;i<n_particles;i++)
+    {
+        sumsquare[j]=0.0;
+        mean[j]=0.0;
+    }
+fclose(f_seed);
 }
 
-fclose(f_seed);
 nr=0;
+if(PLOT_TRAJ==1)
+{
+    
+    strcat(trjname,data);
+    trajectory2= fopen(trjname,"w");
+    fprintf(trajectory2,"#Thermostat used: %s\n#n_steps=%d,tau=%f,nruns=%d\n#Freq.file used:\n",thermo,n_steps,tau2,nruns);
+    for(np=0;np<n_particles;np++)
+        fprintf(trajectory2,"#%f\n",freq_vett[np]);
+}
 while(nr<nruns)
 {
 	SEED=(long)-1;
 	a=ran1(&SEED);
-	SEED=seeds[nr];
+	if(nruns>1)
+        SEED=seeds[nr];
+    else
+        SEED=0;
 	initialize_q(pos,n_particles,m,Tstart,freq_vett,&SEED);
     initialize_v(vel,m,n_particles,Tstart,&SEED);
         for(j=0;j<n_particles;j++)
         {
-            energy1[j]=0.0;
+            //energy1[j]=0.0;
             energy2[j]=0.0;
            /* for(k=0;k<n_particles;k++)
                 {
@@ -127,14 +170,19 @@ while(nr<nruns)
         }
 
 
-        thermo_type=bussi;
+        //thermo_type=bussi;
 
-        trajectory2= fopen("trajectory2.dat","w");
+
         int counter=0;
         boolean UPDATE_P=FALSE;
         for(i=0;i<n_steps;i++)
         {
-            print_traj(pos,vel,0,trajectory2);
+            if(PLOT_TRAJ==1 && nruns==1)
+            {
+                for(np=0;np<n_particles;np++)
+                fprintf(trajectory2,"%f %f ",pos[np],vel[np]);
+                fprintf(trajectory2,"\n");
+            }
             if(counter>=(tau2/dt))
             {
             UPDATE_P=TRUE;
@@ -148,37 +196,40 @@ while(nr<nruns)
             for(j=0;j<n_particles;j++)
             {
                 energy2[j]+=oscill_energy(pos[j],vel[j],freq_vett[j],m)/n_steps;
-                for(k=0;k<n_particles;k++)
+               /* for(k=0;k<n_particles;k++)
                     {
                             pcorr_matrix[j][k]+=pow(m,2)*vel[j]*vel[k]/n_steps;
-                            qcorr_matrix[j][k]+=vel[j]*vel[k]/n_steps;
+                            qcorr_matrix[j][k]+=vel[j]*vel[k]/n_steps;*/
                            /* sprintf(prtc_numb,"%d%c%d",j+1,'_',k+1);
                             strcat(fname,prtc_numb);
                             ph=fopen(fname,"a");
                             fprintf(ph,"%d %f\n",i,atan(vel[j]/pos[j])-atan(vel[k]/pos[k]));
                             fclose(ph);
                             strcpy(fname,"phase");*/
-                    }
+                    //}
             }
         }
 
-        fclose(trajectory2);
+
         //energy_before=fopen("energy_before.dat","w");
         //energy_after=fopen("energy_after.dat","w");
         //pcorr=fopen("pcorr_matr.dat","w");
         //qcorr=fopen("qcorr_matr.dat","w");
         //if( energy_before!=NULL && energy_after!=NULL && qcorr!=NULL && pcorr!=NULL)
-            for(i=0;i<n_particles;i++)
+            if(nruns>1)
             {
-                //fprintf(energy_before,"%f %f\n",freq_vett[i],energy1[i]);
-                //fprintf(energy_after,"%f %f\n",freq_vett[i],energy2[i]);
-                sumsquare[i]+=pow(energy2[i],2)/nruns;
-                mean[i]+=energy2[i]/nruns;
-                /*for(j=0;j<n_particles;j++)
-                    {
-                    fprintf(pcorr,"%d %d %f\n",i,j,pcorr_matrix[i][j]);
-                    fprintf(qcorr,"%d %d %f\n",i,j,qcorr_matrix[i][j]);
-                    }*/
+                for(i=0;i<n_particles;i++)
+                {
+                    //fprintf(energy_before,"%f %f\n",freq_vett[i],energy1[i]);
+                    //fprintf(energy_after,"%f %f\n",freq_vett[i],energy2[i]);
+                    sumsquare[i]+=pow(energy2[i],2)/nruns;
+                    mean[i]+=energy2[i]/nruns;
+                    /*for(j=0;j<n_particles;j++)
+                        {
+                        fprintf(pcorr,"%d %d %f\n",i,j,pcorr_matrix[i][j]);
+                        fprintf(qcorr,"%d %d %f\n",i,j,qcorr_matrix[i][j]);
+                        }*/
+                }
             }
 
         //Test to plot trajectory without thermostat (only Hamiltonian steps)
@@ -204,11 +255,22 @@ while(nr<nruns)
 
 nr++;
 }
-energy=fopen("energy.dat","w");
+if(PLOT_TRAJ==1)
+    fclose(trajectory2);
+strcat(ename,data);
+energy=fopen(ename,"w");
+fprintf(energy,"#Thermostat used: %s\n#n_steps=%d,tau=%f,nruns=%d\n#Freq.file used:\n",thermo,n_steps,tau2,nruns);
+for(np=0;np<n_particles;np++)
+    fprintf(energy,"#%f\n",freq_vett[np]);
 for(i=0;i<n_particles;i++)
 	{
-	stdev[i]=(sqrt(sumsquare[i]-pow(mean[i],2)))/sqrt(nruns);
-	fprintf(energy,"%f %f %f\n",freq_vett[i],mean[i],stdev[i]);
+    if(nruns>1)
+        {
+        stdev[i]=(sqrt(sumsquare[i]-pow(mean[i],2)))/sqrt(nruns);
+        fprintf(energy,"%f %f %f\n",freq_vett[i],mean[i],stdev[i]);
+        }
+    else
+        fprintf(energy,"%f %f\n",freq_vett[i],energy2[i]);
 	}
 fclose(energy);
 return 0;
