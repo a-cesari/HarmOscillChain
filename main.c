@@ -40,7 +40,7 @@ double *pos;     //phonon positions vector
 double *vel;     //phonon velocities vector     //to change with dynamic allocation
 double *freq_vett,t_tot,dt,tau,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,*sumsquare,*mean,*stdev;         //phonon frequency vector, energy without thermostat, energy with thermostat
 int n_particles=0,n_steps,i,j,k,nruns=1,nr,intseed,narg,PLOT_TRAJ=0,np;
-double targetT=20.0,Tstart=10.0,m=1.0,a,tau1,tau2;
+double targetT=40.0,Tstart=10.0,m=1.0,a,tau1,tau2;
 char fname[15]="phase",prtc_numb[6],seeds_fn[20],thermo[15],*ptr,data[17],trjname[21]="trj",ename[21]="en";
 t_type thermo_type;
 long SEED,*seeds;
@@ -110,7 +110,6 @@ for(i=0;i<n_particles;i++)
 sort_increasing(freq_vett,n_particles);
 //t_tot=100000;
 tau1=2*M_PI/max(freq_vett,n_particles);
-tau2=10; /*relaxation time of thermostat toward target T */
 tau=tau2;
 if(tau2>tau1)
 	tau=tau1;
@@ -144,7 +143,7 @@ if(PLOT_TRAJ==1)
     
     strcat(trjname,data);
     trajectory2= fopen(trjname,"w");
-    fprintf(trajectory2,"#Thermostat used: %s\n#n_steps=%d,tau=%f,nruns=%d\n#Freq.file used:\n",thermo,n_steps,tau2,nruns);
+    fprintf(trajectory2,"#%d %d\n#Thermostat used: %s\n#n_steps=%d,tau=%f,nruns=%d\n#Freq.file used:\n",n_steps,2*n_particles,thermo,n_steps,tau2,nruns);
     for(np=0;np<n_particles;np++)
         fprintf(trajectory2,"#%f\n",freq_vett[np]);
 }
@@ -155,7 +154,7 @@ while(nr<nruns)
 	if(nruns>1)
         SEED=seeds[nr];
     else
-        SEED=0;
+        SEED=(long)0;
 	initialize_q(pos,n_particles,m,Tstart,freq_vett,&SEED);
     initialize_v(vel,m,n_particles,Tstart,&SEED);
         for(j=0;j<n_particles;j++)
