@@ -39,8 +39,8 @@ FILE *f_freq,*energy_before,*energy_after,*trajectory1,*trajectory2,*pcorr,*qcor
 double *pos;     //phonon positions vector
 double *vel;     //phonon velocities vector     //to change with dynamic allocation
 double *freq_vett,t_tot,dt,tau,*energy1,*energy2,***matr_array,**pcorr_matrix,**qcorr_matrix,*sumsquare,*mean,*stdev;         //phonon frequency vector, energy without thermostat, energy with thermostat
-int n_particles=0,n_steps,i,j,k,nruns=1,nr,intseed,narg,PLOT_TRAJ=0,np;
-double targetT=40.0,Tstart=10.0,m=1.0,a,tau1,tau2;
+int n_particles=0,n_steps,i,j,k,nruns=1,nr,intseed,narg,PLOT_TRAJ=0,np,COMP_EN=0;
+double targetT=20.0,Tstart=10.0,m=1.0,a,tau1,tau2;
 char fname[15]="phase",prtc_numb[6],seeds_fn[20],thermo[15],*ptr,data[17],trjname[21]="trj",ename[21]="en";
 t_type thermo_type;
 long SEED,*seeds;
@@ -64,9 +64,11 @@ if(argc>4)
 if(argc>5)
     PLOT_TRAJ=atoi(argv[5]);
 if(argc>6)
+    COMP_EN=atoi(argv[6]);
+if(argc>7)
 {
-    nruns=atoi(argv[6]);
-    strcpy(seeds_fn,argv[7]);
+    nruns=atoi(argv[7]);
+    strcpy(seeds_fn,argv[8]);
 }
 time (&rawtime);
 ltime = localtime(&rawtime);
@@ -157,7 +159,9 @@ while(nr<nruns)
         SEED=(long)0;
 	initialize_q(pos,n_particles,m,Tstart,freq_vett,&SEED);
     initialize_v(vel,m,n_particles,Tstart,&SEED);
-        for(j=0;j<n_particles;j++)
+    if(COMP_EN==1)
+    {
+    for(j=0;j<n_particles;j++)
         {
             //energy1[j]=0.0;
             energy2[j]=0.0;
@@ -167,7 +171,7 @@ while(nr<nruns)
                 qcorr_matrix[j][k]=0.0;
                 }*/
         }
-
+    }
 
         //thermo_type=bussi;
 
@@ -192,21 +196,24 @@ while(nr<nruns)
             thermostat(vel,n_particles,m,targetT,dt/2,2,tau2,thermo_type,UPDATE_P,&SEED);
             counter++;
             UPDATE_P=FALSE;
-            for(j=0;j<n_particles;j++)
-            {
-                energy2[j]+=oscill_energy(pos[j],vel[j],freq_vett[j],m)/n_steps;
-               /* for(k=0;k<n_particles;k++)
-                    {
-                            pcorr_matrix[j][k]+=pow(m,2)*vel[j]*vel[k]/n_steps;
-                            qcorr_matrix[j][k]+=vel[j]*vel[k]/n_steps;*/
-                           /* sprintf(prtc_numb,"%d%c%d",j+1,'_',k+1);
-                            strcat(fname,prtc_numb);
-                            ph=fopen(fname,"a");
-                            fprintf(ph,"%d %f\n",i,atan(vel[j]/pos[j])-atan(vel[k]/pos[k]));
-                            fclose(ph);
-                            strcpy(fname,"phase");*/
-                    //}
-            }
+	    if(COMP_EN==1)
+	    {
+	      for(j=0;j<n_particles;j++)
+	      {
+		  energy2[j]+=oscill_energy(pos[j],vel[j],freq_vett[j],m)/n_steps;
+		/* for(k=0;k<n_particles;k++)
+		      {
+			      pcorr_matrix[j][k]+=pow(m,2)*vel[j]*vel[k]/n_steps;
+			      qcorr_matrix[j][k]+=vel[j]*vel[k]/n_steps;*/
+			    /* sprintf(prtc_numb,"%d%c%d",j+1,'_',k+1);
+			      strcat(fname,prtc_numb);
+			      ph=fopen(fname,"a");
+			      fprintf(ph,"%d %f\n",i,atan(vel[j]/pos[j])-atan(vel[k]/pos[k]));
+			      fclose(ph);
+			      strcpy(fname,"phase");*/
+		      //}
+	      }
+	    }
         }
 
 
@@ -256,22 +263,30 @@ nr++;
 }
 if(PLOT_TRAJ==1)
     fclose(trajectory2);
+if(COMP_EN==1)
+{
 strcat(ename,data);
 energy=fopen(ename,"w");
 fprintf(energy,"#Thermostat used: %s\n#n_steps=%d,tau=%f,nruns=%d\n#Freq.file used:\n",thermo,n_steps,tau2,nruns);
 for(np=0;np<n_particles;np++)
     fprintf(energy,"#%f\n",freq_vett[np]);
+}
 for(i=0;i<n_particles;i++)
-	{
+{
     if(nruns>1)
-        {
-        stdev[i]=(sqrt(sumsquare[i]-pow(mean[i],2)))/sqrt(nruns);
-        fprintf(energy,"%f %f %f\n",freq_vett[i],mean[i],stdev[i]);
-        }
+    {
+      stdev[i]=(sqrt(sumsquare[i]-pow(mean[i],2)))/sqrt(nruns);
+      fprintf(energy,"%f %f %f\n",freq_vett[i],mean[i],stdev[i]);
+    }
     else
-        fprintf(energy,"%f %f\n",freq_vett[i],energy2[i]);
-	}
-fclose(energy);
+    { 
+      if(COMP_EN==1)
+	fprintf(energy,"%f %f\n",freq_vett[i],energy2[i]);
+      
+    }
+}
+if(COMP_EN==1)
+  fclose(energy);
 return 0;
 
 }
