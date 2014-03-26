@@ -1,0 +1,8 @@
+freqfile freq4.dat
+simtime 100000
+thermostat bussi
+thermostatDOF 20
+tau 10
+write_traj 1
+comp_en 0
+seed 3698
